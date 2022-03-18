@@ -28,7 +28,7 @@ public class Map : MonoBehaviour
     public (int, int) starting_point;
     public List<List<Tile>> map;
     public List<Tile> paths; // temp until dungeon_paths works
-    public List<List<Tile>> dungeons_paths;
+    public List<Tile>[] dungeons_paths;
     public List<Tile> dungeons;
     public Dictionary<int, GameObject> tileset; //= new Dictionary<int, GameObject>();
     public GameObject f, b, u, r, d, l, u_r, u_d, u_l, r_d, r_l, d_l, n_u, n_r, n_d, n_l, q, dj, sp;
@@ -45,9 +45,10 @@ public class Map : MonoBehaviour
         this.tileset = new Dictionary<int, GameObject>();
         this.tile_groups = new Dictionary<int, GameObject>();
         this.tile_grid = new List<List<GameObject>>();
-        Temp(10, 10, 4);
+        Temp(10, 10, 40);
         GenerateMap();
         InstanciateMap();
+        GetPossibleBranch();
     }
 
     public void Temp(int width, int height, int dungeon_amount)
@@ -55,6 +56,7 @@ public class Map : MonoBehaviour
         this.width = width;
         this.height = height;
         this.dungeon_amount = dungeon_amount;
+        this.dungeons_paths = new List<Tile>[this.dungeon_amount];
         // Set out of bound tile
         this.out_of_bound_tile.out_of_bound = true;
         // init tileset
@@ -166,12 +168,62 @@ public class Map : MonoBehaviour
         { return false; }
     }
 
-    public void GeneratePath(int x, int y, int max_size, int depth)
+    public bool TileCanBeDungeon(int x, int y, int depth)
+    {
+        //Debug.Log("x : " + x + " y : " + y);
+        if (depth < 4)
+        {
+            depth++;
+            Tile tile = this.map[x][y];
+            foreach (Tile next_tile in tile.neighbor)
+            {
+                if (next_tile != null && !next_tile.out_of_bound)
+                {
+                    if (next_tile.dungeon) { /*Debug.Log(" x : " + next_tile.x + " y : " + next_tile.y);*/ return false; }
+                    else { TileCanBeDungeon(next_tile.x, next_tile.y, depth); }
+                }
+            }
+        }
+        return true;
+
+    }
+
+    public bool TileCanBeBranch(int x, int y)
     {
         Tile tile = this.map[x][y];
+        if (!tile.out_of_bound && !tile.dungeon && tile.available_directions != 0) { return true; }
+        else { return false; }
+    }
+
+    public Tile GetPossibleBranch()
+    {
+        List<Tile> paths_copy = new List<Tile>();
+        for (int i = 0; i < this.paths.Count; i++)
+        {
+            paths_copy.Add(this.paths[i]);
+        }
+        while (paths_copy.Count > 0)
+        {
+            int paths_index = (int)Random.Range(0.0f, paths_copy.Count);
+            Tile tile = paths_copy[paths_index];
+            if (TileCanBeBranch(tile.x, tile.y)) { return tile; }
+            paths_copy.RemoveAt(paths_index);
+        }
+        return this.out_of_bound_tile;
+    }
+
+    public void GeneratePath(int x, int y, int dungeon_index, int max_size, int depth)
+    {
+        Debug.Log("Building path for dungeon " + dungeon_index + " adding tile x " + x + " y " + y);
+
+        Tile tile = this.map[x][y];
+        tile.Update();
+        //tile.UpdateNeighbor();
+
+        Debug.Log("Tile available dir are " + tile.available_directions);
         if (depth <= max_size)
         {
-            tile.Update();
+            //tile.Update();
             List<(Tile, byte, byte)> available_neighbor = new List<(Tile, byte, byte)>();
             if ((tile.available_directions & (byte)direction.up) != 0 && !tile.neighbor[0].out_of_bound) { available_neighbor.Add((tile.neighbor[0], (byte)direction.up, (byte)direction.down)); }
             if ((tile.available_directions & (byte)direction.right) != 0 && !tile.neighbor[1].out_of_bound) { available_neighbor.Add((tile.neighbor[1], (byte)direction.right, (byte)direction.left)); }
@@ -185,22 +237,45 @@ public class Map : MonoBehaviour
                 tile.AddOpening(available_neighbor[next_tile_index].Item2);
                 next_tile.AddOpening(available_neighbor[next_tile_index].Item3);
                 // Add the tile to the path of the current dungeon
+                this.dungeons_paths[dungeon_index].Add(tile);
                 this.paths.Add(tile);
                 depth++;
-                GeneratePath(next_tile.x, next_tile.y, max_size, depth);
+                GeneratePath(next_tile.x, next_tile.y, dungeon_index, max_size, depth);
             }
-            else { tile.dungeon = true;}
+            else { /*Debug.Log(TileCanBeDungeon(tile.x, tile.y, 0));*/ tile.dungeon = true;/* dungeons.Add(tile);*/ }
         }
-        else { tile.dungeon = true;}
+        else { /*Debug.Log(TileCanBeDungeon(tile.x, tile.y, 0));*/ tile.dungeon = true; /*dungeons.Add(tile);*/ }
     }
 
     public void GenerateMap()
     {
-        GeneratePath(this.starting_point.Item1, this.starting_point.Item2, 8, 0);
+        this.dungeons_paths[0] = new List<Tile>();
+        GeneratePath(this.starting_point.Item1, this.starting_point.Item2, 0, 8, 0);
         for (int i = 1; i < this.dungeon_amount; i++)
         {
-            int paths_index = (int)Random.Range(0.0f, this.paths.Count);
-            GeneratePath(this.paths[paths_index].x, this.paths[paths_index].y, 8, 0);
+            this.dungeons_paths[i] = new List<Tile>();
+
+            Tile branch_tile = GetPossibleBranch();
+            if(branch_tile.out_of_bound) { Debug.Log("This map is not viable"); }
+
+
+            //int dungeon_paths_index = (int)Random.Range(0.0f, i-1); // choose a random existing dungeon path
+            //int paths_index = (int)Random.Range(0.0f, this.dungeons_paths[dungeon_paths_index].Count); // choose a random tile in the dungeon path
+
+
+            //int paths_index = (int)Random.Range(0.0f, this.paths.Count);
+            //GeneratePath(this.dungeons_paths[dungeon_paths_index][paths_index].x, this.dungeons_paths[dungeon_paths_index][paths_index].y, i, 8, 0);
+            GeneratePath(branch_tile.x, branch_tile.y, i, 8, 0);
+
+            /*
+            Debug.Log("Current path length is : " + this.dungeons_paths[i].Count);
+            Debug.Log("It started on the path of the dungeon : " + dungeon_paths_index);
+            Debug.Log("It's length is : " + this.dungeons_paths[dungeon_paths_index].Count + " and it begins at : " + paths_index);
+            int distance = this.dungeons_paths[dungeon_paths_index].Count - paths_index + this.dungeons_paths[i].Count;
+            Debug.Log("The distance from previous dugneon is : " + distance);
+            */
+
+            //GeneratePath(this.paths[paths_index].x, this.paths[paths_index].y, i, 8, 0);
         }
 
     }

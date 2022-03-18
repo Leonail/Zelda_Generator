@@ -48,6 +48,12 @@ public class Tile
 
     public void UpdateNeighbor()
     {
-
+        foreach (Tile neighnb in neighbor)
+        {
+            if(neighnb != null && !neighnb.out_of_bound)
+            {
+                neighnb.Update();
+            }
+        }
     }
 }
