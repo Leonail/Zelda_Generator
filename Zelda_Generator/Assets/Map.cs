@@ -164,37 +164,31 @@ public class Map : MonoBehaviour
 
     public void GeneratePath(int x, int y, int max_size, int depth)
     {
-        Debug.Log("Generate_Path");
-        Debug.Log("max size : " + max_size + " depth : " + depth);
-        Debug.Log("x : " + x + " y : " + y);
         Tile tile = this.map[x][y];
         if (depth <= max_size)
         {
-            Debug.Log("Before Update");
             tile.Update();
-            Debug.Log("Tile updated");
             List<(Tile, byte, byte)> available_neighbor = new List<(Tile, byte, byte)>();
             if ((tile.available_directions & (byte)direction.up) != 0 && !tile.neighbor[0].out_of_bound) { available_neighbor.Add((tile.neighbor[0], (byte)direction.up, (byte)direction.down)); }
             if ((tile.available_directions & (byte)direction.right) != 0 && !tile.neighbor[1].out_of_bound) { available_neighbor.Add((tile.neighbor[1], (byte)direction.right, (byte)direction.left)); }
             if ((tile.available_directions & (byte)direction.down) != 0 && !tile.neighbor[2].out_of_bound) { available_neighbor.Add((tile.neighbor[2], (byte)direction.down, (byte)direction.up)); }
             if ((tile.available_directions & (byte)direction.left) != 0 && !tile.neighbor[3].out_of_bound) { available_neighbor.Add((tile.neighbor[3], (byte)direction.left, (byte)direction.right)); }
             int available_neighbor_amount = available_neighbor.Count;
-            Debug.Log("available N count " + available_neighbor_amount);
             if (available_neighbor_amount != 0)
             {
                 int next_tile_index = (int)Random.Range(0.0f, available_neighbor_amount);
                 Tile next_tile = available_neighbor[next_tile_index].Item1;
+                Debug.Log("x : " + x + " y : " + y + " dir : " + available_neighbor[next_tile_index].Item2);
                 tile.AddOpening(available_neighbor[next_tile_index].Item2);
                 next_tile.AddOpening(available_neighbor[next_tile_index].Item3);
                 // Add the tile to the path of the current dungeon
-                Debug.Log("X : " + x + " Y : " + y);
                 this.paths.Add(tile);
                 depth++;
                 GeneratePath(next_tile.x, next_tile.y, max_size, depth);
             }
-            else { tile.dungeon = true; Debug.Log("No N available"); }
+            else { tile.dungeon = true;}
         }
-        else { tile.dungeon = true; Debug.Log("Max depth"); }
+        else { tile.dungeon = true;}
     }
 
     public void GenerateMap()
@@ -214,6 +208,7 @@ public class Map : MonoBehaviour
         /** Creates a new tile using the type id code, group it with common
     tiles, set it's position and store the gameobject. **/
         int tile_id = this.map[x][y].openings;
+        Debug.Log("x : " + x + " y : " + y + " tile id : " + tile_id);
         GameObject tile_prefab = this.tileset[tile_id];
         GameObject tile_group = tile_groups[tile_id];
         GameObject tile = Instantiate(tile_prefab, tile_group.transform);
@@ -273,13 +268,13 @@ public class Tile
     }
     public void SetNeighbor(Map map)
     {
-        if(this.x-1 >= 0) { this.neighbor[0] = map.map[this.x-1][this.y]; }
+        if(this.x-1 >= 0) { this.neighbor[3] = map.map[this.x-1][this.y]; }
         else { this.neighbor[0] = map.out_of_bound_tile;}
-        if (this.y+1 < map.width) { this.neighbor[1] = map.map[this.x][this.y+1]; }
+        if (this.y+1 < map.width) { this.neighbor[0] = map.map[this.x][this.y+1]; }
         else { this.neighbor[1] = map.out_of_bound_tile; }
-        if (this.x+1 < map.height) { this.neighbor[2] = map.map[this.x+1][this.y]; }
+        if (this.x+1 < map.height) { this.neighbor[1] = map.map[this.x+1][this.y]; }
         else { this.neighbor[2] = map.out_of_bound_tile; }
-        if (this.y-1 >= 0) { this.neighbor[3] = map.map[this.x][this.y-1]; }
+        if (this.y-1 >= 0) { this.neighbor[2] = map.map[this.x][this.y-1]; }
         else { this.neighbor[3] = map.out_of_bound_tile; }
     }
 
