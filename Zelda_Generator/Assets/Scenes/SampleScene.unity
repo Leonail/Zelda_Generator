@@ -1145,10 +1145,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9a094206d4730fc44928f22cd62db5cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  prefab_plains: {fileID: 1287395279}
-  prefab_forest: {fileID: 113697838}
-  prefab_hills: {fileID: 1013541839}
-  prefab_mountains: {fileID: 1011978066}
+  width: 10
+  height: 10
+  dungeon_amount: 4
   f: {fileID: 1717122457}
   b: {fileID: 769999927}
   u: {fileID: 192808554}
